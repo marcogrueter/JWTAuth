@@ -14,7 +14,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  * Class ResolveUser
  * @package ReaZzon\JWTAuth\Http\Middlewares
  */
-class ResolveUser
+class ResolveBackendUser
 {
     /**
      * Handle an incoming request.
@@ -34,6 +34,9 @@ class ResolveUser
             }
 
             $obJWTGuard->userOrFail();
+
+            // validation for backend user
+            $obJWTGuard->validateBackendUser();
 
             return $next($request);
         } catch (TokenExpiredException|UserNotDefinedException $e) {

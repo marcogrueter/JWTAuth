@@ -55,10 +55,12 @@ class JWTGuard extends JWTGuardBase
     {
         $user = $this->user();
 
-        if ($this->isBackendUserModel($user)) {
-            if (!$user->hasPermission('reazzon.jwtauth.allow_jwt_login')) {
-                throw new AccessDeniedHttpException('JWT auth not allowed');
-            }
+        if (!$this->isBackendUserModel($user)) {
+            throw new AccessDeniedHttpException('Access denied');
+        }
+
+        if (!$user->hasPermission('reazzon.jwtauth.allow_jwt_login')) {
+            throw new AccessDeniedHttpException('Access denied');
         }
     }
 
