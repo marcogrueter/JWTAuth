@@ -7,6 +7,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Tymon\JWTAuth\JWTGuard as JWTGuardBase;
 use ReaZzon\JWTAuth\Classes\Behaviors\UserSubjectBehavior;
 
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+
+
 /**
  * Class JWTGuard
  * @package ReaZzon\JwtUser\Classes\Guards
@@ -14,7 +17,7 @@ use ReaZzon\JWTAuth\Classes\Behaviors\UserSubjectBehavior;
 class JWTGuard extends JWTGuardBase
 {
     /**
-     * @param  Authenticatable  $user
+     * @param Authenticatable $user
      * @return string
      */
     public function login($user): string
@@ -29,14 +32,6 @@ class JWTGuard extends JWTGuardBase
     }
 
     /**
-     * @return bool
-     */
-    public function hasToken(): bool
-    {
-        return $this->jwt->parser()->setRequest($this->getRequest())->hasToken();
-    }
-
-    /**
      * @param User $user
      */
     private function validateMethodParam(Authenticatable $user): void
@@ -48,4 +43,27 @@ class JWTGuard extends JWTGuardBase
         }
     }
 
+    /**
+     * @return bool
+     */
+    public function hasToken(): bool
+    {
+        return $this->jwt->parser()->setRequest($this->getRequest())->hasToken();
+    }
+
+    public function validateBackendUser()
+    {
+        $user = $this->user();
+
+        if ($this->isBackendUserModel($user)) {
+            if (!$user->hasPermission('reazzon.jwtauth.allow_jwt_login')) {
+                throw new AccessDeniedHttpException('JWT auth not allowed');
+            }
+        }
+    }
+
+    private function isBackendUserModel(Authenticatable $user)
+    {
+        return $user instanceof \Backend\Models\User;
+    }
 }

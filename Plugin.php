@@ -6,6 +6,7 @@ namespace ReaZzon\JWTAuth;
 use Event, Config;
 use System\Classes\PluginBase;
 use ReaZzon\JWTAuth\Classes\UserPluginResolver;
+use ReaZzon\JWTAuth\Classes\BackendUserResolver;
 use ReaZzon\JWTAuth\Classes\Contracts\UserPluginResolver as UserPluginResolverContract;
 
 use Illuminate\Auth\Access\Gate;
@@ -38,7 +39,7 @@ class Plugin extends PluginBase
             'name'        => 'JWTAuth',
             'description' => 'JWT authorization plugin',
             'author'      => 'ReaZzon, LeMaX10',
-            'icon'        => 'icon-leaf'
+            'icon'        => 'icon-leaf',
         ];
     }
 
@@ -49,65 +50,20 @@ class Plugin extends PluginBase
      */
     public function register()
     {
-        $this->checkRequiredPlugins();
-
-        $this->app->singleton(
-            UserPluginResolverContract::class,
-            static fn() => UserPluginResolver::instance()
-        );
+        if (request()->is('backend/*')) {
+            $this->app->singleton(
+                UserPluginResolverContract::class,
+                static fn() => BackendUserResolver::instance()
+            );
+        } else {
+            $this->app->singleton(
+                UserPluginResolverContract::class,
+                static fn() => UserPluginResolver::instance()
+            );
+        }
 
         $this->registerGates();
         $this->registerJWT();
-    }
-
-    /**
-     * Boot method, called right before the request route.
-     *
-     * @return void
-     */
-    public function boot()
-    {
-        $this->registerConfigs();
-        $this->addEventListeners();
-    }
-
-    protected function checkRequiredPlugins()
-    {
-        $plugins = ['RainLab.User', 'Lovata.Buddies'];
-        $pluginInstalled = false;
-
-        foreach ($plugins as $pluginName) {
-            if (PluginManager::instance()->hasPlugin($pluginName)) {
-                $pluginInstalled = true;
-            }
-        }
-
-        if (!$pluginInstalled) {
-            PluginManager::instance()->disablePlugin('ReaZzon.JWTAuth');
-        }
-    }
-
-    /**
-     *
-     */
-    private function registerConfigs()
-    {
-        $pluginNamespace = str_replace('\\', '.', strtolower(__NAMESPACE__));
-        $packages = Config::get($pluginNamespace . '::packages');
-
-        foreach ($packages as $name => $options) {
-            if (!empty($options['config']) && !empty($options['config_namespace'])) {
-                Config::set($options['config_namespace'], $options['config']);
-            }
-        }
-    }
-
-    /**
-     *
-     */
-    private function addEventListeners()
-    {
-        Event::subscribe(UserModelHandler::class);
     }
 
     /**
@@ -144,6 +100,40 @@ class Plugin extends PluginBase
         });
     }
 
+    /**
+     * Boot method, called right before the request route.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        $this->registerConfigs();
+        $this->addEventListeners();
+    }
+
+    /**
+     *
+     */
+    private function registerConfigs()
+    {
+        $pluginNamespace = str_replace('\\', '.', strtolower(__NAMESPACE__));
+        $packages = Config::get($pluginNamespace . '::packages');
+
+        foreach ($packages as $name => $options) {
+            if (!empty($options['config']) && !empty($options['config_namespace'])) {
+                Config::set($options['config_namespace'], $options['config']);
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    private function addEventListeners()
+    {
+        Event::subscribe(UserModelHandler::class);
+    }
+
     public function registerSettings(): array
     {
         return [
@@ -155,8 +145,23 @@ class Plugin extends PluginBase
                 'class'       => \ReaZzon\JWTAuth\Models\BuddiesSettings::class,
                 'order'       => 500,
                 'keywords'    => 'buddies users',
-                'permissions' => ['buddies-menu-*']
-            ]
+                'permissions' => ['buddies-menu-*'],
+            ],
+        ];
+    }
+
+    /**
+     * Registers any back-end permissions used by this plugin.
+     *
+     * @return array
+     */
+    public function registerPermissions(): array
+    {
+        return [
+            'reazzon.jwtauth.allow_jwt_login' => [
+                'tab'   => 'JWTAuth',
+                'label' => 'Allow JWT login',
+            ],
         ];
     }
 }

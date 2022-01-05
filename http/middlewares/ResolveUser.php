@@ -8,6 +8,8 @@ use Tymon\JWTAuth\Exceptions\UserNotDefinedException;
 use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+
 /**
  * Class ResolveUser
  * @package ReaZzon\JWTAuth\Http\Middlewares
@@ -32,6 +34,9 @@ class ResolveUser
             }
 
             $obJWTGuard->userOrFail();
+
+            // validation for backend user
+            $obJWTGuard->validateBackendUser();
 
             return $next($request);
         } catch (TokenExpiredException|UserNotDefinedException $e) {
